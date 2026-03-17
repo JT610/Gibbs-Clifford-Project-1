@@ -781,7 +781,7 @@ if __name__ == '__main__':
             if enable_clock and not first_move and white_move:
                 # TODO start timer, replace the 'pass' instruction with your function
                 pass
-            first_move = False
+            
 
             # print board and process move
             print(game)
@@ -789,7 +789,10 @@ if __name__ == '__main__':
             
 
             # switch side
-            if valid: white_move = not white_move
+            if valid: 
+                white_move = not white_move
+                first_move = False
+            
 
         # ask if you want to play again
         resp = -1

@@ -1,3 +1,5 @@
+
+
 def rook_endgame(game):
     # TODO setup board
 
@@ -6,7 +8,7 @@ def rook_endgame(game):
 
     while game.game_active:
         print(game)
-    
+        'R'
 
         # TODO implement endgame
 
