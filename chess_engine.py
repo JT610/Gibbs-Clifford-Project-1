@@ -698,8 +698,8 @@ class ChessEngine:
                 return True
         return False
 
-    def handle_help(self):
-        print('List of allowed commands:')
+    def display_help(self):
+        print('\n\nList of allowed commands:\n')
         print('\'help\':\n\tDisplays this list\n')
         print('\'(=)\', \'=\', \'draw\':\n\tOffer Draw\n')
         print('\'resign\':\n\tResign from the game\n')
@@ -711,7 +711,7 @@ class ChessEngine:
         print('\tAfter that is an optional \'x\' to indicate captures')
         print('\tNext is file, then rank of the destination')
         print('\tIf promoting, now add \'=Q\' to indicate promotion to queen. (RBN) are also possible')
-        print('\tOptional indicators for check \'+\' or checkmate \'#\' can be added to the end')
+        print('\tOptional indicators for check \'+\' or checkmate \'#\' can be added to the end\n')
 
 
 if __name__ == '__main__':
