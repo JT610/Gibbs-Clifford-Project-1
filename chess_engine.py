@@ -3,8 +3,11 @@ from rook_endgame import rook_endgame
 from chess_clock import *
 
 class ChessEngine:
+    ##### Class that contains the game state and logic for processing moves, as well as functions for setting up different game types and displaying the board
+
     def __init__(self):
-        # Initialize the chess engine
+        ##### Initialize the chess engine
+
         self.board = [""] * 64
         self.en_passant_possible_file = None
         self.white_can_castle_kingside = False
@@ -17,11 +20,14 @@ class ChessEngine:
         self.white_kingside_rook_file = None
         self.move_counter = 0
         self.position_history = [self.board.copy() + [self.white_can_castle_kingside, self.white_can_castle_queenside, self.black_can_castle_kingside, self.black_can_castle_queenside, self.en_passant_possible_file, True]]
+        self.move_log = []
         self.game_active = False
         pass
 
     def setup_normal(self):
-        # Set up the initial chess board configuration
+        ##### Set up the initial chess board configuration
+
+        # initialize board with standard starting position, as well as all other game state variables
         self.board = [""] * 64
         self.board[0:8] = ["r", "n", "b", "q", "k", "b", "n", "r"]  # Black pieces
         self.board[8:16] = ["p"] * 8  # Black pawns
@@ -37,9 +43,14 @@ class ChessEngine:
         self.black_kingside_rook_file = 'h'
         self.white_kingside_rook_file = 'h'
         self.position_history = []
+        self.move_log = []
         self.game_active = True
+        self.move_counter = 0
 
     def verify_chess960(self,pieces):
+        ##### Verify validity of a Chess960 starting position
+
+        # get indices of pieces relevant for validity checks
         B1 = pieces.index("B")
         B2 = pieces.index("B", B1 + 1)
         R1 = pieces.index("R")
@@ -53,14 +64,18 @@ class ChessEngine:
         return True
 
     def setup_chess960(self):
-        # Set up the chess board for Chess960 (Fischer Random Chess)
+        ##### Set up the chess board for Chess960 (Fischer Random Chess)
+
         import random
         pieces = ["R", "N", "B", "Q", "K", "B", "N", "R"]
         correct = False
+
+        # randomly shuffle pieces until a valid Chess960 starting position is generated (bishops on opposite colors and king between rooks)
         while not correct:
             random.shuffle(pieces)
             correct = self.verify_chess960(pieces)
 
+        # initialize board with generated starting position, as well as all other game state variables
         self.board = [""] * 64
         self.board[0:8] = [p.lower() for p in pieces]  # Black pieces
         self.board[8:16] = ["p"] * 8  # Black pawns
@@ -76,9 +91,13 @@ class ChessEngine:
         self.black_kingside_rook_file = chr(pieces.index("R", pieces.index("R") + 1) + ord('a'))
         self.white_kingside_rook_file = chr(pieces.index("R", pieces.index("R") + 1) + ord('a'))
         self.position_history = []
+        self.move_log = []
         self.game_active = True
+        self.move_counter = 0
 
     def get(self, file, rank):
+        ##### get piece for the given square
+
         row = 8 - rank
         col = ord(file) - ord('a')
         if(row < 0 or row > 7 or col < 0 or col > 7):
@@ -87,6 +106,8 @@ class ChessEngine:
         return self.board[row * 8 + col]
 
     def set(self, file, rank, piece):
+        ##### set piece for the given square
+
         row = 8 - rank
         col = ord(file) - ord('a')
         if(row < 0 or row > 7 or col < 0 or col > 7):
@@ -94,7 +115,7 @@ class ChessEngine:
         self.board[row * 8 + col] = piece
 
     def process_move(self, white_move):
-        #### Process the move and update the game state
+        ##### Process the move and update the game state
 
         # get all legal moves and check for checkmate and stalemate
         legal_candidates = self.get_all_legal_moves(white_move)
@@ -102,27 +123,33 @@ class ChessEngine:
             # checkmate or stalemate
             if self.is_in_check(white_move):
                 print(("0-1" if white_move else "1-0") + "   Checkmate! " + ("Black wins!" if white_move else "White wins!"))
+                self.move_log[-1] = self.move_log[-1].replace('+', '#')
+                self.move_log = self.move_log + [('0-1' if white_move else '1-0')]
                 self.game_active = False
             else:
                 print("1/2-1/2   Stalemate! It's a draw!")
+                self.move_log = self.move_log + ['1/2-1/2']
                 self.game_active = False
             return False
         
         # check for insufficient material (K-K, KB-K, KN-K, KB-KB with bishops on same color)
         if (not any(piece in 'QRPqrp' for piece in self.board) and (sum(piece in 'BbNn' for piece in self.board) <= 1)) or (not any(piece in 'QRNPqrnp' for piece in self.board) and self.board.count('B') == 1 and self.board.count('b') == 1 and self.board.index('B') % 2 == self.board.index('b') % 2):
             print("1/2-1/2   Insufficient material! It's a draw!")
+            self.move_log = self.move_log + ['1/2-1/2']
             self.game_active = False
             return False
         
         # threefold repetition check
         if self.position_history.count(self.board.copy() + [self.white_can_castle_kingside, self.white_can_castle_queenside, self.black_can_castle_kingside, self.black_can_castle_queenside, self.en_passant_possible_file, white_move]) == 3:
             print("1/2-1/2   Threefold repetition: It's a draw!")
+            self.move_log = self.move_log + ['1/2-1/2']
             self.game_active = False
             return False
         
         # check move counter for 50 move rule check
         if (self.move_counter >= 100): # 50 moves each
             print("1/2-1/2   50 move rule: It's a draw!")
+            self.move_log = self.move_log + ['1/2-1/2']
             self.game_active = False
             return False
 
@@ -153,8 +180,10 @@ class ChessEngine:
         # handle draw offer and resignation
         if re.fullmatch(r'\(=\)', move) or re.fullmatch(r'draw\??', move.lower()):
             # Handle draw offer
+            self.move_log = self.move_log + ['(=)']
             if self.get_draw_response(white_move):
                 print("1/2-1/2   Draw by agreement!")
+                self.move_log = self.move_log + ['1/2-1/2']
                 self.game_active = False
             else:
                 print("Draw request not accepted")
@@ -162,6 +191,7 @@ class ChessEngine:
 
         if re.fullmatch(r'resign\??', move.lower()):
             print(("0-1" if white_move else "1-0") + "   " + ("White resigns. Black wins!" if white_move else "Black resigns. White wins!"))
+            self.move_log = self.move_log + [('0-1' if white_move else '1-0')]
             self.game_active = False
             return False
 
@@ -215,6 +245,7 @@ class ChessEngine:
 
                 # append board history, increase move counter and return
                 self.position_history = self.position_history + [self.board.copy() + [self.white_can_castle_kingside, self.white_can_castle_queenside, self.black_can_castle_kingside, self.black_can_castle_queenside, self.en_passant_possible_file, not white_move]]
+                self.move_log = self.move_log + ['O-O-O']
                 self.move_counter += 1
                 return True
 
@@ -260,6 +291,7 @@ class ChessEngine:
 
                 # append board history, increase move counter and return
                 self.position_history = self.position_history + [self.board.copy() + [self.white_can_castle_kingside, self.white_can_castle_queenside, self.black_can_castle_kingside, self.black_can_castle_queenside, self.en_passant_possible_file, not white_move]]
+                self.move_log = self.move_log + ['O-O-O']
                 self.move_counter += 1
                 return True
     
@@ -310,6 +342,7 @@ class ChessEngine:
 
                 # append board history, increase move counter and return
                 self.position_history = self.position_history + [self.board.copy() + [self.white_can_castle_kingside, self.white_can_castle_queenside, self.black_can_castle_kingside, self.black_can_castle_queenside, self.en_passant_possible_file, not white_move]]
+                self.move_log = self.move_log + ['O-O']
                 self.move_counter += 1
                 return True
 
@@ -355,6 +388,7 @@ class ChessEngine:
 
                 # append board history, increase move counter and return
                 self.position_history = self.position_history + [self.board.copy() + [self.white_can_castle_kingside, self.white_can_castle_queenside, self.black_can_castle_kingside, self.black_can_castle_queenside, self.en_passant_possible_file, not white_move]]
+                self.move_log = self.move_log + ['O-O']
                 self.move_counter += 1
                 return True
 
@@ -427,7 +461,8 @@ class ChessEngine:
             self.en_passant_possible_file = None
 
         # reset move counter if move is a pawn move or a capture
-        if piece == 'P' or self.get(dest_file, dest_rank) != "":
+        capture = self.get(dest_file, dest_rank) != "" or en_passant
+        if piece == 'P' or capture:
             self.move_counter = 0
 
 
@@ -455,10 +490,13 @@ class ChessEngine:
 
         # append board history, increase move counter and return
         self.position_history = self.position_history + [self.board.copy() + [self.white_can_castle_kingside, self.white_can_castle_queenside, self.black_can_castle_kingside, self.black_can_castle_queenside, self.en_passant_possible_file, not white_move]]
+        self.move_log = self.move_log + [self.move_alg_not(src_file, src_rank, dest_file, dest_rank, piece, promotion, promote_to_piece, capture, en_passant, legal_candidates) + ('+' if self.is_in_check(not white_move) else '')]
         self.move_counter += 1
         return True
                 
-    def __repr__(self):        # Return a string representation of the board
+    def __repr__(self):
+        ##### Return a string representation of the board
+
         board_str = "\n   a b c d e f g h\n   ---------------\n"
         for rank in range(8,0,-1):
             board_str += str(rank) + " |"
@@ -474,13 +512,18 @@ class ChessEngine:
         return board_str
     
     def get_all_legal_moves(self, white_move, ignore_self_checks=False):
+        ##### returns list of all legal moves for the given player, in format [src_file, src_rank, dest_file, dest_rank, piece, en_passant]
+        
+        # iterates throgh all squares
         legal_moves = []
         for i in range(64):
+            # only consider pieces of the given color
             if self.board[i] != "" and self.board[i].isupper() == white_move:
                 piece = self.board[i].upper()
                 src_file = chr(ord('a') + i % 8)
                 src_rank = 8 - (i // 8)
 
+                # add legal moves for piece
                 match piece:
                     case 'P':
                         if white_move:
@@ -660,9 +703,10 @@ class ChessEngine:
                                 if self.get(chr(ord(src_file) + file_diff), src_rank + rank_diff) == "" or (self.get(chr(ord(src_file) + file_diff), src_rank + rank_diff).islower() == white_move and self.get(chr(ord(src_file) + file_diff), src_rank + rank_diff) != 'e'):
                                     legal_moves.append([src_file, src_rank, chr(ord(src_file) + file_diff), src_rank + rank_diff, piece, False])
 
+        # ignore self checks if specified, in order to prevent infinite recursion when testing for checks
         if ignore_self_checks: return legal_moves
 
-        # test for self checks or kings being captured
+        # test for self checks or kings being captured, and remove illegal moves
         legal_moves_copy = legal_moves.copy()
         for move in legal_moves_copy:
             src_file, src_rank, dest_file, dest_rank, piece, en_passant = move
@@ -685,6 +729,9 @@ class ChessEngine:
         return legal_moves
     
     def is_in_check(self, is_white):
+        ##### test whether the king of the given color is in check
+
+        # find king position
         if is_white:
             king_index = self.board.index("K")
         else:
@@ -693,12 +740,15 @@ class ChessEngine:
         king_file = chr(ord('a') + king_index % 8)
         king_rank = 8 - (king_index // 8)
 
+        # check if any legal move coulf capture the king
         for move in self.get_all_legal_moves(not is_white, ignore_self_checks = True):
             if move[2] == king_file and move[3] == king_rank:
                 return True
         return False
 
     def display_help(self):
+        ##### displays command list and move syntax guide for user
+
         print('\n\nList of allowed commands:\n')
         print('\'help\':\n\tDisplays this list\n')
         print('\'(=)\', \'=\', \'draw\':\n\tOffer Draw\n')
@@ -713,14 +763,60 @@ class ChessEngine:
         print('\tIf promoting, now add \'=Q\' to indicate promotion to queen. (RBN) are also possible')
         print('\tOptional indicators for check \'+\' or checkmate \'#\' can be added to the end\n')
 
+    def get_draw_response(self, white_move):
+        ##### ask user whether they accept the draw offer
 
+        while True:
+            resp = input((("White" if white_move else "Black") + " offers a draw. Do you accept? (y/n): "))
+            if resp.lower() in ['q', 'quit']:
+                print("Quitting program...")
+                exit()
+            if resp.lower() in ['y', 'yes']:
+                return True
+            if resp.lower() in ['n', 'no']:
+                return False
+            print("Not a valid input, please try again or type 'q' to quit\n")
+
+    def move_alg_not(self, src_file, src_rank, dest_file, dest_rank, piece, promotion, promote_to_piece, capture, en_passant, legal_candidates):
+        ##### generate standardized algebraic notation for move, since user input can be non-standard but move log should be standardized
+        
+        move_str = ""
+
+        # indicate piece for all pieces except pawns
+        if piece != 'P': move_str += piece
+
+        # give departure information in case of ambiguity, or for pawn captures
+        non_resolved_candidates = [x for x in legal_candidates if ((x[2] == dest_file) and (x[3] == dest_rank) and (x[4] == piece))]
+        if len(non_resolved_candidates) > 1 or (piece == 'P' and capture):
+            rank_resolved_candidates = [x for x in non_resolved_candidates if x[1] == src_rank]
+            if len(rank_resolved_candidates) > 1 or (piece == 'P' and capture):
+                move_str += src_file
+            file_resolved_candidates = [x for x in non_resolved_candidates if x[0] == src_file]
+            if len(file_resolved_candidates) > 1:
+                move_str += str(src_rank)   
+            
+        # indicate capture
+        if capture: move_str += "x"
+
+        # indicate destination
+        move_str += dest_file + str(dest_rank)
+
+        # indicate promotion and or en passant
+        if promotion: move_str += "=" + promote_to_piece
+        if en_passant: move_str += " e.p."
+
+        return move_str
+
+##### Main function to create the chess engine object and run the game loop, also handles gamemode and chess clock selection
 if __name__ == '__main__':
-
+    # initialize engine
     print("\n\n\nChess Engine Initialized\n")
     game = ChessEngine()
 
+    # main loop
     while True:
 
+        # select gamemode
         resp = -1
         while True:
             print("What gamemode do you want to play?")
@@ -738,6 +834,7 @@ if __name__ == '__main__':
             else: 
                 break
 
+        # implement selected gamemode
         match int(resp):
             case 1:
                 game.setup_normal()
@@ -749,6 +846,7 @@ if __name__ == '__main__':
             
                 continue
     
+        # select clock option
         enable_clock = False
         resp = -1
         while True:
@@ -787,7 +885,7 @@ if __name__ == '__main__':
             print(game)
             valid = game.process_move(white_move)
             
-
+            print(game.move_log)
             # switch side
             if valid: 
                 white_move = not white_move
@@ -805,4 +903,6 @@ if __name__ == '__main__':
                 exit()
             else:
                 print("Please enter a valid input (y/n): ")
+
+
 
