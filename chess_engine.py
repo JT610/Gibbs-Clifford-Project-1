@@ -890,6 +890,10 @@ if __name__ == '__main__':
             if valid: 
                 white_move = not white_move
                 first_move = False
+                if enable_clock:
+                    # TODO switch active player
+                    pass
+
             
 
         # ask if you want to play again

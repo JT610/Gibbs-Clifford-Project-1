@@ -1,7 +1,7 @@
 class chess_clock:
-    def __init__(self, time):
-        self.white_time = time
-        self.black_time = time
+    def __init__(self):
+        self.white_time = 0
+        self.black_time = 0
         self.white_timer_running = False
         self.black_timer_running = False
     
