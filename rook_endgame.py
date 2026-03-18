@@ -57,9 +57,9 @@ def computer_move(game):
     ############################################################################################################
     legal_moves = game.get_all_legal_moves(True)                                                               #
     if not [x for x in legal_moves if (x[4] == piece and x[2] == dest_file and x[3] == dest_rank)]:            #
-        print("\n\nComputer attempted an illegal move\n")                                                            #
+        print("\n\nComputer attempted an illegal move\n")                                                      #
         print("Legal moves are: ", legal_moves)                                                                #
-        print("\nComputer attempted move: ", piece + dest_file + str(dest_rank) + '\n')                                 #
+        print("\nComputer attempted move: ", piece + dest_file + str(dest_rank) + '\n')                        #
         exit()                                                                                                 #
     ############################################################################################################
 
