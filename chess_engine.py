@@ -867,18 +867,35 @@ if __name__ == '__main__':
 
             print("Not a valid input, please try again or type 'q' to quit\n")
     
+        # initialize chess clock if enabled
+        # ask user for time
+        clock = None
+        if enable_clock:
+            while True:
+                try:
+                    time_minutes = float(input("Enter time per player in minutes: "))
+                    if time_minutes > 0:
+                        break
+                    print("Time must be positive")
+                except ValueError:
+                    print("Please enter a valid number")
+            clock = chess_clock()
+            clock.setup_clock(time_minutes)
     
         # Start the game
         white_move = True
         first_move = True
         game.position_history = game.position_history + [game.board.copy() + [game.white_can_castle_kingside, game.white_can_castle_queenside, game.black_can_castle_kingside, game.black_can_castle_queenside, game.en_passant_possible_file, white_move]]
 
+        # start white's timer on first move
+        if enable_clock:
+            clock.start_timer(white_move)
+
         # game loop
         while game.game_active:
-            # start clock if enabled
-            if enable_clock and not first_move and white_move:
-                # TODO start timer, replace the 'pass' instruction with your function
-                pass
+            # set active player and start clock if enabled
+            if enable_clock and not first_move:
+                clock.set_active_player(white_move)
             
 
             # print board and process move
@@ -891,8 +908,13 @@ if __name__ == '__main__':
                 white_move = not white_move
                 first_move = False
                 if enable_clock:
-                    # TODO switch active player
-                    pass
+                    # stop current timer and check if time ran out
+                    clock.stop_timer(not white_move)
+                    if clock.check_time():
+                        print("\nTime's up!")
+                        print(clock.__repr__())
+                        game.game_active = False
+
 
             
 
@@ -907,6 +929,3 @@ if __name__ == '__main__':
                 exit()
             else:
                 print("Please enter a valid input (y/n): ")
-
-
-
