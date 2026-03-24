@@ -866,40 +866,82 @@ if __name__ == '__main__':
                 break
 
             print("Not a valid input, please try again or type 'q' to quit\n")
+
+        # initialize chess clock if enabled
+        # ask user for time
+        clock = None
+        if enable_clock:
+            while True:
+                try:
+                    time_minutes = float(input("Enter time per player in minutes: "))
+                    if time_minutes > 0:
+                        break
+                    print("Time must be positive")
+                except ValueError:
+                    print("Please enter a valid number")
+            clock = chess_clock()
+            clock.setup_clock(time_minutes)
     
     
         # Start the game
         white_move = True
-        first_move = True
+        first_two_moves = True
+        clock_running = False
         game.position_history = game.position_history + [game.board.copy() + [game.white_can_castle_kingside, game.white_can_castle_queenside, game.black_can_castle_kingside, game.black_can_castle_queenside, game.en_passant_possible_file, white_move]]
 
         # game loop
         while game.game_active:
             # start clock if enabled
-            if enable_clock and not first_move and white_move:
-                # TODO start timer, replace the 'pass' instruction with your function
-                pass
+            if enable_clock and not first_two_moves and not clock_running:
+                clock.start_timer(True)
             
 
             # print board and process move
+            print("\n\n\n")
+            print(clock)
             print(game)
             valid = game.process_move(white_move)
             
-            print(game.move_log)
+            if clock.check_time() and game.game_active:
+                clock.stop_timer(True)
+                clock.stop_timer(False)
+
+                white_timeout = clock.white_time <= 0
+                print("\n" + ("0-1" if white_timeout else "1-0") + "   " + ("White" if white_timeout else "Black") + " ran out of time! " + ("Black wins!" if white_timeout else "White wins!"))
+                game.move_log = game.move_log + [('0-1' if white_timeout else '1-0')]
+                print(clock.__repr__())
+                game.game_active = False
+
+
             # switch side
             if valid: 
-                white_move = not white_move
-                first_move = False
-                if enable_clock:
-                    # TODO switch active player
-                    pass
+                if not white_move:
+                    first_two_moves = False
 
+                white_move = not white_move
+                if enable_clock and not first_two_moves:
+                    clock.set_active_player(white_move)
+            elif not first_two_moves and enable_clock:
+                clock.stop_timer(white_move)
+                clock.start_timer(white_move)
             
+        # stop clock
+        if enable_clock:
+            clock.stop_timer(True)
+            clock.stop_timer(False)
+
+        # output move log to file
+        with open("move_log.txt", "w") as f:
+            f.write("Last Game:\n")
+            i = 0
+            for move in game.move_log:
+                f.write(f"{i//2 + 1}. {move}\n")
+                i += 1
 
         # ask if you want to play again
         resp = -1
         while True:
-            resp = input("Do you want to play another game? (y/n): ")
+            resp = input("\n\nDo you want to play another game? (y/n): ")
             if resp.lower() in ['y', 'yes']:
                 break
             elif resp.lower() in ['n', 'no']:
